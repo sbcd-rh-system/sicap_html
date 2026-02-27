@@ -138,23 +138,20 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             let result;
-            let textResponse = await response.text();
+            const textResponse = await response.text();
 
-            // Limpa possíveis logs do Python que "vazaram" para o stdout/resposta
-            if (textResponse.includes('}{')) {
-                textResponse = '{' + textResponse.split('}{').pop();
-            } else if (textResponse.includes('}')) {
-                const lastBrace = textResponse.lastIndexOf('}');
-                const firstBrace = textResponse.indexOf('{');
-                if (firstBrace !== -1 && lastBrace !== -1) {
-                    textResponse = textResponse.substring(firstBrace, lastBrace + 1);
-                }
+            // Log de diagnóstico — ver no DevTools (F12 > Console)
+            console.log('[SICAP] Status:', response.status);
+            console.log('[SICAP] Resposta bruta:', textResponse);
+
+            if (!textResponse || textResponse.trim() === '') {
+                throw new Error(`Resposta vazia do servidor (Status ${response.status}). Verifique os logs do Render.`);
             }
 
             try {
                 result = JSON.parse(textResponse);
             } catch (jsonErr) {
-                throw new Error(`Erro de Formato (Status ${response.status}): ${textResponse.substring(0, 100)}`);
+                throw new Error(`Resposta inválida (Status ${response.status}): ${textResponse.substring(0, 200)}`);
             }
 
             if (response.ok && result.status === 'sucesso') {

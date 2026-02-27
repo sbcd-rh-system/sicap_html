@@ -47,6 +47,11 @@ async def health():
     }
 
 
+@app.post("/api/test")
+async def test_post():
+    """Endpoint de diagnóstico para validar que o POST funciona no Render."""
+    return JSONResponse(status_code=200, content={"status": "ok", "message": "POST funcionando"})
+
 @app.post("/api/processar")
 async def processar_arquivo(
     file: UploadFile = File(...),
@@ -71,19 +76,24 @@ async def processar_arquivo(
 
         resultado = processar_planilha(file_path, usuario, senha, mes, ano, prestacao_id)
 
-        if resultado["status"] == "erro":
-            return JSONResponse(status_code=422, content=resultado)
-
-        return JSONResponse(status_code=200, content=resultado)
+        status_code = 422 if resultado["status"] == "erro" else 200
+        import json
+        # Usa json.dumps manual para evitar falhas de serialização silenciosas
+        json_str = json.dumps(resultado, ensure_ascii=False, default=str)
+        from fastapi.responses import Response
+        return Response(content=json_str, status_code=status_code, media_type="application/json")
 
     except Exception as e:
-        return JSONResponse(
+        import json, traceback
+        erro = {
+            "status": "erro",
+            "mensagem": f"Erro interno do servidor: {str(e)}",
+            "detalhes": {"traceback": traceback.format_exc()[-500:]}
+        }
+        return Response(
+            content=json.dumps(erro, ensure_ascii=False),
             status_code=500,
-            content={
-                "status": "erro",
-                "mensagem": f"Erro interno do servidor: {str(e)}",
-                "detalhes": {}
-            }
+            media_type="application/json"
         )
     finally:
         if os.path.exists(file_path):
