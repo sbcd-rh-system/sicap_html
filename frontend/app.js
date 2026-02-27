@@ -2,7 +2,7 @@
 // Altere para a URL do seu Web Service após criar no Render
 const API_BASE_URL = window.location.hostname === 'localhost'
     ? ''   // local: usa URL relativa (backend roda junto)
-    : 'https://SEU-WEBSERVICE.onrender.com'; // ← SUBSTITUIR após criar o Web Service
+    : 'https://sicap-html-2.onrender.com'; // Web Service (backend Python)
 
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('sicap-form');
