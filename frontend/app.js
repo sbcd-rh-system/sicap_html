@@ -138,10 +138,11 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             let result;
+            const textResponse = await response.text();
             try {
-                result = await response.json();
+                result = JSON.parse(textResponse);
             } catch (jsonErr) {
-                throw new Error(`Erro inesperado: ${response.statusText}`);
+                throw new Error(`Servidor retornou erro ${response.status}: ${textResponse.substring(0, 100)}...`);
             }
 
             if (response.ok && result.status === 'sucesso') {

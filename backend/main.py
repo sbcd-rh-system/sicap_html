@@ -21,9 +21,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Diretórios
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+# Diretórios - No Render, usamos /tmp para garantir permissão de escrita
+UPLOAD_DIR = "/tmp/sicap_uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # Endpoint de Upload e Processamento
