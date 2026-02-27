@@ -1,7 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse
 import shutil
 import os
 import uuid
@@ -22,24 +22,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Diretórios - No Render, usamos /tmp para garantir permissão de escrita
+# Diretórios
 UPLOAD_DIR = "/tmp/sicap_uploads" if os.name != 'nt' else os.path.join(os.path.dirname(__file__), "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# Diretório do Frontend
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(os.path.dirname(CURRENT_DIR), "frontend")
 if not os.path.exists(FRONTEND_DIR):
     FRONTEND_DIR = os.path.join(os.getcwd(), "frontend")
 
 # ============================================================
-# ROTAS DA API  (registradas ANTES do mount estático)
+# ROTAS DA API — registradas ANTES do mount estático.
+# Rotas explícitas do FastAPI SEMPRE têm prioridade sobre
+# StaticFiles mesmo que o mount seja em "/".
 # ============================================================
 
 @app.get("/health")
 async def health():
-    """Endpoint de diagnóstico para confirmar que a API está viva."""
-    return {"status": "ok", "frontend_dir": FRONTEND_DIR, "upload_dir": UPLOAD_DIR}
+    return {
+        "status": "ok",
+        "frontend_dir": FRONTEND_DIR,
+        "frontend_exists": os.path.exists(FRONTEND_DIR),
+        "upload_dir": UPLOAD_DIR,
+    }
 
 
 @app.post("/api/processar")
@@ -81,7 +86,6 @@ async def processar_arquivo(
             }
         )
     finally:
-        # Limpa o arquivo enviado depois de processar
         if os.path.exists(file_path):
             try:
                 os.remove(file_path)
@@ -90,26 +94,14 @@ async def processar_arquivo(
 
 
 # ============================================================
-# ARQUIVOS ESTÁTICOS (montado POR ÚLTIMO)
-# Serve CSS, JS, imagens do frontend
+# ARQUIVOS ESTÁTICOS — montado por último em "/".
+# Em Starlette/FastAPI, rotas explícitas sempre vencem.
+# O html=True faz o StaticFiles servir index.html na raiz.
 # ============================================================
 if os.path.exists(FRONTEND_DIR):
-    app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
-
-    # Serve o index.html na raiz e em qualquer rota não encontrada
-    @app.get("/")
-    async def serve_root():
-        return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
-
-    @app.get("/{full_path:path}")
-    async def serve_spa(full_path: str):
-        file_candidate = os.path.join(FRONTEND_DIR, full_path)
-        if os.path.isfile(file_candidate):
-            return FileResponse(file_candidate)
-        return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
-
+    app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
 else:
-    print(f"Erro Crítico: Diretório frontend não encontrado em {FRONTEND_DIR}")
+    print(f"ERRO CRITICO: frontend nao encontrado em {FRONTEND_DIR}")
 
 
 if __name__ == "__main__":
