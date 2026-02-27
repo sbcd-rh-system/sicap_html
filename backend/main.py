@@ -1,10 +1,11 @@
 from fastapi import FastAPI, UploadFile, File, Form
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse, Response
 import shutil
 import os
 import uuid
+import json
+import traceback
 
 try:
     from .processor import processar_planilha
@@ -13,11 +14,9 @@ except ImportError:
 
 app = FastAPI(title="SICAP Uploader", version="1.0.0")
 
-# Configurar CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -32,9 +31,25 @@ if not os.path.exists(FRONTEND_DIR):
     FRONTEND_DIR = os.path.join(os.getcwd(), "frontend")
 
 # ============================================================
-# ROTAS DA API — registradas ANTES do mount estático.
-# Rotas explícitas do FastAPI SEMPRE têm prioridade sobre
-# StaticFiles mesmo que o mount seja em "/".
+# FRONTEND — servido com FileResponse explícito.
+# SEM StaticFiles mount: elimina qualquer conflito de rota.
+# ============================================================
+
+@app.get("/")
+@app.get("/index.html")
+async def serve_index():
+    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"), media_type="text/html")
+
+@app.get("/style.css")
+async def serve_css():
+    return FileResponse(os.path.join(FRONTEND_DIR, "style.css"), media_type="text/css")
+
+@app.get("/app.js")
+async def serve_js():
+    return FileResponse(os.path.join(FRONTEND_DIR, "app.js"), media_type="application/javascript")
+
+# ============================================================
+# API
 # ============================================================
 
 @app.get("/health")
@@ -49,8 +64,12 @@ async def health():
 
 @app.post("/api/test")
 async def test_post():
-    """Endpoint de diagnóstico para validar que o POST funciona no Render."""
-    return JSONResponse(status_code=200, content={"status": "ok", "message": "POST funcionando"})
+    return Response(
+        content='{"status":"ok","message":"POST funcionando"}',
+        status_code=200,
+        media_type="application/json"
+    )
+
 
 @app.post("/api/processar")
 async def processar_arquivo(
@@ -62,9 +81,10 @@ async def processar_arquivo(
     prestacao_id: str = Form(None)
 ):
     if not file.filename.endswith(('.xlsx', '.xls')):
-        return JSONResponse(
+        return Response(
+            content='{"status":"erro","mensagem":"Formato invalido. Use .xlsx ou .xls"}',
             status_code=400,
-            content={"status": "erro", "mensagem": "Formato de arquivo inválido. Use .xlsx ou .xls"}
+            media_type="application/json"
         )
 
     filename = f"{uuid.uuid4()}_{file.filename}"
@@ -76,19 +96,18 @@ async def processar_arquivo(
 
         resultado = processar_planilha(file_path, usuario, senha, mes, ano, prestacao_id)
 
-        status_code = 422 if resultado["status"] == "erro" else 200
-        import json
-        # Usa json.dumps manual para evitar falhas de serialização silenciosas
-        json_str = json.dumps(resultado, ensure_ascii=False, default=str)
-        from fastapi.responses import Response
-        return Response(content=json_str, status_code=status_code, media_type="application/json")
+        status_code = 422 if resultado.get("status") == "erro" else 200
+        return Response(
+            content=json.dumps(resultado, ensure_ascii=False, default=str),
+            status_code=status_code,
+            media_type="application/json"
+        )
 
     except Exception as e:
-        import json, traceback
         erro = {
             "status": "erro",
-            "mensagem": f"Erro interno do servidor: {str(e)}",
-            "detalhes": {"traceback": traceback.format_exc()[-500:]}
+            "mensagem": f"Erro interno: {str(e)}",
+            "detalhes": {"traceback": traceback.format_exc()[-800:]}
         }
         return Response(
             content=json.dumps(erro, ensure_ascii=False),
@@ -101,17 +120,6 @@ async def processar_arquivo(
                 os.remove(file_path)
             except Exception:
                 pass
-
-
-# ============================================================
-# ARQUIVOS ESTÁTICOS — montado por último em "/".
-# Em Starlette/FastAPI, rotas explícitas sempre vencem.
-# O html=True faz o StaticFiles servir index.html na raiz.
-# ============================================================
-if os.path.exists(FRONTEND_DIR):
-    app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
-else:
-    print(f"ERRO CRITICO: frontend nao encontrado em {FRONTEND_DIR}")
 
 
 if __name__ == "__main__":
