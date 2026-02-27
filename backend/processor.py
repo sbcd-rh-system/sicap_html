@@ -28,7 +28,12 @@ LOGIN_ENDPOINT = f"{API_BASE_URL}/Autenticacao/Login"
 FOLHA_PJ_ENDPOINT = f"{API_BASE_URL}/FolhaPagamentoPessoaJuridica"
 
 # Caminho para Mapeamentos
+# Caminho para Mapeamentos
+# Se rodar via 'run.py' na raiz, o BASE_DIR deve ser a própria raiz.
+# Se rodar via 'backend/main.py', sobe um nível.
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if not os.path.exists(os.path.join(BASE_DIR, "Utils")):
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__)) # Fallback local
 ARQUIVO_JSON_MAPEAMENTOS = os.path.join(BASE_DIR, "Utils", "mapeamentos.json")
 
 # ==================================================================================

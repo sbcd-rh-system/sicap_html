@@ -70,12 +70,18 @@ async def processar_arquivo(
         )
 
 # Servir Frontend
-FRONTEND_DIR = os.path.join(os.path.dirname(BASE_DIR), "frontend")
+# Tenta localizar o diretório frontend em relação à raiz do projeto
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+FRONTEND_DIR = os.path.join(os.path.dirname(CURRENT_DIR), "frontend")
+
+if not os.path.exists(FRONTEND_DIR):
+    # Fallback caso a estrutura mude no deploy do Render
+    FRONTEND_DIR = os.path.join(os.getcwd(), "frontend")
 
 if os.path.exists(FRONTEND_DIR):
     app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
 else:
-    print(f"Alerta: Diretório frontend não encontrado em {FRONTEND_DIR}")
+    print(f"Erro Crítico: Diretório frontend não encontrado em {FRONTEND_DIR}")
 
 if __name__ == "__main__":
     import uvicorn
