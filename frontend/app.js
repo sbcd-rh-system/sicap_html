@@ -1,3 +1,9 @@
+// ⚙️ URL do backend Python (Web Service no Render)
+// Altere para a URL do seu Web Service após criar no Render
+const API_BASE_URL = window.location.hostname === 'localhost'
+    ? ''   // local: usa URL relativa (backend roda junto)
+    : 'https://SEU-WEBSERVICE.onrender.com'; // ← SUBSTITUIR após criar o Web Service
+
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('sicap-form');
     const fileInput = document.getElementById('file-upload');
@@ -132,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('prestacao_id', prestacaoIdManual);
 
         try {
-            const response = await fetch('/api/processar', {
+            const response = await fetch(`${API_BASE_URL}/api/processar`, {
                 method: 'POST',
                 body: formData
             });
