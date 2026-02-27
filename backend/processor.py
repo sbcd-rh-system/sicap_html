@@ -12,15 +12,23 @@ from datetime import datetime
 from pathlib import Path
 
 # Configuração de logs
-log_dir = os.path.join(os.path.dirname(__file__), 'logs')
+log_dir = "/tmp/sicap_logs" if os.name != 'nt' else os.path.join(os.path.dirname(__file__), 'logs')
 os.makedirs(log_dir, exist_ok=True)
 log_file = os.path.join(log_dir, f"sicap_log_{datetime.now().strftime('%Y%m%d')}.log")
 
-logging.basicConfig(
-    filename=log_file,
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+try:
+    logging.basicConfig(
+        filename=log_file,
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s'
+    )
+except Exception:
+    # Fallback para console caso não tenha permissão de escrita (Render/Produção)
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s'
+    )
+    logging.info("Logging configurado para Console (StreamHandler)")
 
 # API
 API_BASE_URL = "https://sicap.prefeitura.sp.gov.br/v1"

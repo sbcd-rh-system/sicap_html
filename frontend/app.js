@@ -138,11 +138,23 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             let result;
-            const textResponse = await response.text();
+            let textResponse = await response.text();
+
+            // Limpa possíveis logs do Python que "vazaram" para o stdout/resposta
+            if (textResponse.includes('}{')) {
+                textResponse = '{' + textResponse.split('}{').pop();
+            } else if (textResponse.includes('}')) {
+                const lastBrace = textResponse.lastIndexOf('}');
+                const firstBrace = textResponse.indexOf('{');
+                if (firstBrace !== -1 && lastBrace !== -1) {
+                    textResponse = textResponse.substring(firstBrace, lastBrace + 1);
+                }
+            }
+
             try {
                 result = JSON.parse(textResponse);
             } catch (jsonErr) {
-                throw new Error(`Servidor retornou erro ${response.status}: ${textResponse.substring(0, 100)}...`);
+                throw new Error(`Erro de Formato (Status ${response.status}): ${textResponse.substring(0, 100)}`);
             }
 
             if (response.ok && result.status === 'sucesso') {
