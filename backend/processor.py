@@ -217,13 +217,6 @@ def processar_planilha(caminho_arquivo: str, usuario: str, senha: str, mes: str 
                 mes_ref = m.group(1).lower()
                 logging.info(f"Mês detectado via nome do arquivo: {mes_ref}")
         
-        if not mes_ref or not ano:
-             return {
-                 "status": "erro",
-                 "mensagem": "É obrigatório selecionar Mês e Ano de Referência.",
-                 "detalhes": {}
-             }
-        
         if not prestacao_id:
              return {
                  "status": "erro",
